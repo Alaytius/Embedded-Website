@@ -5,6 +5,7 @@ const MongoStore = require("connect-mongo");
 const bcrypt = require("bcrypt");
 const dotenv = require("dotenv");
 const Joi = require("joi");
+const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 // const fetch = require('node-fetch');
 // import fetch from 'node-fetch';
 // import express from 'express';
@@ -151,34 +152,35 @@ app.get("/loggedIn", async (req, res) => {
     res.redirect("/login");
     return;
   }
-  // const options = {
-  //   method: 'POST',
-  //   headers: {
-  //     'apiKey':MONGODB_APIKEY,
-  //     'Content-Type':'application/json',
-  //     'Accept':'application/json'
-  //   },
-  //   body: {
-  //     'dataSource':'Thingy',
-  //     'database':'Project',
-  //     'collection':'Availability',
-  //     'filter': {
-  //       '_id': {
-  //         'eq': {
-  //           'oid':'655a9748344b3bb1f23c1beb'
-  //         }
-  //       }
-  //     }
-  //   }
-  // }
-  // const response = await fetch(MONGODB_ENDPOINT, options);
-  // const data = await response.json();
+  const options = {
+    method: 'POST',
+    headers: {
+      'apiKey':MONGODB_APIKEY,
+      'Content-Type':'application/json',
+      'Accept':'application/json'
+    },
+    body: {
+      'dataSource':'Thingy',
+      'database':'Project',
+      'collection':'Availability',
+      'filter': {
+        '_id': {
+          'eq': {
+            'oid':'655a9748344b3bb1f23c1beb'
+          }
+        }
+      }
+    }
+  }
+  const response = await fetch(MONGODB_ENDPOINT, options);
+  const data = await response.json();
 
   // const randomNumber = Math.floor(Math.random() * 5) + 1;
   // const imageName = `picture${randomNumber}.png`;
 
   const html = `<h1>Yay, you're logged In</h1> 
   <h2>Welcome ${req.session.name}</h2> 
+  <p>${data}</p>
   <br>
   <button onclick="location.href='/logout'">Logout</button>`;
   res.send(html);
