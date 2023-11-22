@@ -5,7 +5,7 @@ const MongoStore = require("connect-mongo");
 const bcrypt = require("bcrypt");
 const dotenv = require("dotenv");
 const Joi = require("joi");
-import fetch from 'node-fetch';
+const fetch = require('node-fetch');
 
 // Load environment variables
 dotenv.config();
