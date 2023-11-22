@@ -5,6 +5,7 @@ const MongoStore = require("connect-mongo");
 const bcrypt = require("bcrypt");
 const dotenv = require("dotenv");
 const Joi = require("joi");
+import fetch from 'node-fetch';
 
 // Load environment variables
 dotenv.config();
@@ -20,6 +21,8 @@ const {
   MONGODB_PASSWORD,
   MONGODB_SESSION_SECRET,
   NODE_SESSION_SECRET,
+  MONGODB_ENDPOINT,
+  MONGODB_APIKEY,
 } = process.env;
 
 // Database connection
@@ -63,7 +66,8 @@ app.use(
 );
 
 app.get("/", (req, res) => {
-  const html = `Welcome to the homepage! <a href="/login">Login</a> or <a href="/createUser">Sign Up!</a>`;
+  const html = `<h1>Welcome to our seat occupancy app!</h1>
+  To get started please <a href="/login">Login</a> or <a href="/createUser">Sign Up!</a>`;
   res.send(html);
 });
 
@@ -134,18 +138,41 @@ app.post("/submitLogin", async (req, res) => {
   }
 });
 
-app.get("/loggedIn", (req, res) => {
+app.get("/loggedIn", async (req, res) => {
   if (!req.session.authenticated) {
     console.log("Not logged in");
     res.redirect("/login");
     return;
   }
-  const randomNumber = Math.floor(Math.random() * 5) + 1;
-  const imageName = `picture${randomNumber}.png`;
+  const options = {
+    method: 'POST',
+    headers: {
+      'apiKey':MONGODB_APIKEY,
+      'Content-Type':'application/json',
+      'Accept':'application/json'
+    },
+    body: {
+      'dataSource':'Thingy',
+      'database':'Project',
+      'collection':'Availability',
+      'filter': {
+        '_id': {
+          'eq': {
+            'oid':'655a9748344b3bb1f23c1beb'
+          }
+        }
+      }
+    }
+  }
+  const response = await fetch(MONGODB_ENDPOINT, options);
+  const data = await response.json();
+
+  // const randomNumber = Math.floor(Math.random() * 5) + 1;
+  // const imageName = `picture${randomNumber}.png`;
 
   const html = `<h1>Yay, you're logged In</h1> 
   <h2>Welcome ${req.session.name}</h2> 
-  <img src="${imageName}" alt="Random image" style="width: 200px; height: 200px;"> 
+  <p>${data}</p>
   <br>
   <button onclick="location.href='/logout'">Logout</button>`;
   res.send(html);
