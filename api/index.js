@@ -20,7 +20,7 @@ dotenv.config();
 
 // Constants
 const saltRounds = 12;
-// const port = process.env.PORT || 3000;
+// const port = 3000;
 const expireTime = 60 * 60 * 1000;
 const {
   MONGODB_DATABASE,
@@ -163,12 +163,8 @@ app.get("/loggedIn", async (req, res) => {
       'dataSource':'Thingy',
       'database':'Project',
       'collection':'Availability',
-      'filter': {
-        '_id': {
-          'eq': {
-            'oid':'655a9748344b3bb1f23c1beb'
-          }
-        }
+      'projection': {
+        'seats':'1'
       }
     }
   }
