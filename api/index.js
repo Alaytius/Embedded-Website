@@ -1,11 +1,18 @@
 // External dependencies
-const express = require("express");
-const session = require("express-session");
-const MongoStore = require("connect-mongo");
-const bcrypt = require("bcrypt");
-const dotenv = require("dotenv");
-const Joi = require("joi");
-const fetch = require('node-fetch');
+// const express = require("express");
+// const session = require("express-session");
+// const MongoStore = require("connect-mongo");
+// const bcrypt = require("bcrypt");
+// const dotenv = require("dotenv");
+// const Joi = require("joi");
+// const fetch = require('node-fetch');
+import fetch from 'node-fetch';
+import express from 'express';
+import session from 'express-session';
+import MongoStore from 'connect-mongo';
+import bcrypt from 'bcrypt';
+import dotenv from 'dotenv';
+import Joi from 'joi';
 
 // Load environment variables
 dotenv.config();
