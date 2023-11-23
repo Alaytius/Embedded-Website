@@ -5,22 +5,15 @@ const MongoStore = require("connect-mongo");
 const bcrypt = require("bcrypt");
 const dotenv = require("dotenv");
 const Joi = require("joi");
-const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
-// const fetch = require('node-fetch');
-// import fetch from 'node-fetch';
-// import express from 'express';
-// import session from 'express-session';
-// import MongoStore from 'connect-mongo';
-// import bcrypt from 'bcrypt';
-// import dotenv from 'dotenv';
-// import Joi from 'joi';
+const nodemailer = require('nodemailer');
+const router = require('express').Router();
 
 // Load environment variables
 dotenv.config();
 
 // Constants
 const saltRounds = 12;
-// const port = 3000;
+const port = process.env.PORT || 3000;
 const expireTime = 60 * 60 * 1000;
 const {
   MONGODB_DATABASE,
@@ -36,11 +29,15 @@ const {
 // Database connection
 const client = require("../databaseConnection");
 const userCollection = client.db(MONGODB_DATABASE).collection("Accounts");
+const sensors = client.db(MONGODB_DATABASE).collection("Availability");
+
+// const router = require("../router.js");
 
 // Express app configuration
 const app = express();
 app.use(express.urlencoded({ extended: false }));
 app.use(express.static(__dirname + "/../public"));
+app.use(express.json());
 
 // Session store configuration
 const mongoStore = MongoStore.create({
@@ -63,6 +60,17 @@ const loginSchema = Joi.object({
   password: Joi.string().pattern(new RegExp("^[a-zA-Z0-9]{3,30}$")).required(),
 });
 
+const transporter = nodemailer.createTransport({
+  port: 465,               // true for 465, false for other ports
+  host: "smtp.gmail.com",
+     auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS,
+       },
+  secure: true,
+});
+
+app.use('/',router);
 // Express app session configuration
 app.use(
   session({
@@ -72,6 +80,7 @@ app.use(
     resave: true,
   })
 );
+
 
 app.get("/", (req, res) => {
   const html = `<h1>Welcome to our seat occupancy app!</h1>
@@ -152,33 +161,37 @@ app.get("/loggedIn", async (req, res) => {
     res.redirect("/login");
     return;
   }
-  const options = {
-    method: 'POST',
-    headers: {
-      'apiKey':MONGODB_APIKEY,
-      'Content-Type':'application/json',
-      'Accept':'application/json'
-    },
-    body: {
-      'dataSource':'Thingy',
-      'database':'Project',
-      'collection':'Availability',
-      'projection': {
-        'seats':'1'
-      }
-    }
-  }
-  const response = await fetch(MONGODB_ENDPOINT, options);
-  const data = await response.json();
-
-  // const randomNumber = Math.floor(Math.random() * 5) + 1;
-  // const imageName = `picture${randomNumber}.png`;
-
-  const html = `<h1>Yay, you're logged In</h1> 
+  const username = req.session.username;
+  const data = await sensors.findOne({});
+  const user = await userCollection.findOne({username});
+  const errorMessage = req.query.error;
+  const html = `
   <h2>Welcome ${req.session.name}</h2> 
-  <p>${data}</p>
+  <p>Seat 1: ${data.seats[0]}</p>
+  <p>Seat 2: ${data.seats[1]}</p>
+  <p>Seat 3: ${data.seats[2]}</p>
+  <p>Seat 4: ${data.seats[3]}</p>
+  <p>Get an email notification when the seat is ready!</p>
+  <form action="/email" method="POST">
+  <label for="email">Enter your email:</label>
+  <input type="text" name="email" id="email" placeholder="email" value="${user.email}">
+  <label for="seat">Select a seat:</label>
+  <select name="seats" id="seats">
+  <option>Seat 1</option>
+  <option>Seat 2</option>
+  <option>Seat 3</option>
+  <option>Seat 4</option>
+  </select>
+  <input type="submit" value="Submit">
+</form> 
+  ${
+    errorMessage
+      ? `<div style="font-size: 14px; color: red;">${errorMessage}</div>`
+      : ""
+  }
   <br>
   <button onclick="location.href='/logout'">Logout</button>`;
+  
   res.send(html);
 });
 
@@ -217,7 +230,25 @@ app.get("*", (req, res) => {
   res.send(html);
 });
 
-// app.listen(port, () => {
-//   console.log(`Server is running on port ${port}`);
-// });
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});
+
+router.post('/email', (req,res) => {
+  const {email, seatChoice} = req.body;
+  console.log(seatChoice);
+  const mailData = {
+    from: process.env.EMAIL_USER,  
+    to: email,   
+    subject: 'Seat Available',
+    text: 'Your seat is ready!',
+  };
+  transporter.sendMail(mailData, (err, info) => {
+    if(err)
+      console.log(err);
+    else
+      console.log(info);
+ });
+ res.redirect("/loggedIn");
+});
 module.exports = app;
