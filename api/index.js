@@ -163,10 +163,19 @@ app.get("/loggedIn", async (req, res) => {
   }
   const username = req.session.username;
   const data = await sensors.findOne({});
-  const user = await userCollection.findOne({username});
+  var user = await userCollection.findOne({username});
   const errorMessage = req.query.error;
   const html = `
-  <h2>Welcome ${req.session.name}</h2> 
+  <head> 
+    <h2>Welcome ${req.session.name}</h2> 
+    <meta http-equiv="refresh" content="40">
+    <script>
+        function getData() {
+          data = await sensors.findOne({});
+        }
+        setInterval('getData()', 30000);
+    </script>
+  </head>
   <p>Seat 1: ${data.seats[0]}</p>
   <p>Seat 2: ${data.seats[1]}</p>
   <p>Seat 3: ${data.seats[2]}</p>
@@ -177,10 +186,10 @@ app.get("/loggedIn", async (req, res) => {
   <input type="text" name="email" id="email" placeholder="email" value="${user.email}">
   <label for="seat">Select a seat:</label>
   <select name="seats" id="seats">
-  <option>Seat 1</option>
-  <option>Seat 2</option>
-  <option>Seat 3</option>
-  <option>Seat 4</option>
+  <option value="Seat1">Seat 1</option>
+  <option value="Seat2">Seat 2</option>
+  <option value="Seat3">Seat 3</option>
+  <option value="Seat4">Seat 4</option>
   </select>
   <input type="submit" value="Submit">
 </form> 
