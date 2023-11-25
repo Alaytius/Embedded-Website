@@ -7,6 +7,7 @@ const dotenv = require("dotenv");
 const Joi = require("joi");
 const nodemailer = require('nodemailer');
 const router = require('express').Router();
+const bull = require("bull");
 
 // Load environment variables
 dotenv.config();
@@ -30,6 +31,7 @@ const {
 const client = require("../databaseConnection");
 const userCollection = client.db(MONGODB_DATABASE).collection("Accounts");
 const sensors = client.db(MONGODB_DATABASE).collection("Availability");
+const emailQueue = new bull("email");
 
 // const router = require("../router.js");
 
@@ -180,19 +182,12 @@ app.get("/loggedIn", async (req, res) => {
   <p>Seat 2: ${data.seats[1]}</p>
   <p>Seat 3: ${data.seats[2]}</p>
   <p>Seat 4: ${data.seats[3]}</p>
-  <p>Get an email notification when the seat is ready!</p>
+  <p>Get an email notification when a seat is ready!</p>
   <form action="/email" method="POST">
   <label for="email">Enter your email:</label>
   <input type="text" name="email" id="email" placeholder="email" value="${user.email}">
-  <label for="seat">Select a seat:</label>
-  <select name="seats" id="seats">
-  <option value="Seat1">Seat 1</option>
-  <option value="Seat2">Seat 2</option>
-  <option value="Seat3">Seat 3</option>
-  <option value="Seat4">Seat 4</option>
-  </select>
   <input type="submit" value="Submit">
-</form> 
+  </form> 
   ${
     errorMessage
       ? `<div style="font-size: 14px; color: red;">${errorMessage}</div>`
@@ -244,13 +239,12 @@ app.listen(port, () => {
 });
 
 router.post('/email', (req,res) => {
-  const {email, seatChoice} = req.body;
-  console.log(seatChoice);
+  const {email} = req.body;
   const mailData = {
     from: process.env.EMAIL_USER,  
     to: email,   
     subject: 'Seat Available',
-    text: 'Your seat is ready!',
+    text: 'A seat is ready!',
   };
   transporter.sendMail(mailData, (err, info) => {
     if(err)
