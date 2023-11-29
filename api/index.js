@@ -7,7 +7,6 @@ const dotenv = require("dotenv");
 const Joi = require("joi");
 const nodemailer = require('nodemailer');
 const router = require('express').Router();
-const bull = require("bull");
 
 // Load environment variables
 dotenv.config();
@@ -31,9 +30,7 @@ const {
 const client = require("../databaseConnection");
 const userCollection = client.db(MONGODB_DATABASE).collection("Accounts");
 const sensors = client.db(MONGODB_DATABASE).collection("Availability");
-const emailQueue = new bull("email");
-
-// const router = require("../router.js");
+const notification = client.db(MONGODB_DATABASE).collection("Notification");
 
 // Express app configuration
 const app = express();
@@ -83,13 +80,14 @@ app.use(
   })
 );
 
-
+// Home page
 app.get("/", (req, res) => {
   const html = `<h1>Welcome to our seat occupancy app!</h1>
   To get started please <a href="/login">Login</a> or <a href="/createUser">Sign Up!</a>`;
   res.send(html);
 });
 
+// Create an account
 app.get("/createUser", (req, res) => {
   const html = `
     create user
@@ -104,6 +102,7 @@ app.get("/createUser", (req, res) => {
   res.send(html);
 });
 
+// Login page
 app.get("/login", (req, res) => {
   const errorMessage = req.query.error;
   const html = `
@@ -123,6 +122,7 @@ app.get("/login", (req, res) => {
   res.send(html);
 });
 
+// Post request for login
 app.post("/submitLogin", async (req, res) => {
   const { username, password } = req.body;
   const user = await userCollection.findOne({ username });
@@ -157,6 +157,7 @@ app.post("/submitLogin", async (req, res) => {
   }
 });
 
+// User login page
 app.get("/loggedIn", async (req, res) => {
   if (!req.session.authenticated) {
     console.log("Not logged in");
@@ -195,10 +196,33 @@ app.get("/loggedIn", async (req, res) => {
   }
   <br>
   <button onclick="location.href='/logout'">Logout</button>`;
-  
   res.send(html);
+  for (const el of data.seats) {
+    if (el == "Empty") {
+      var mail = await notification.findOne();
+      if (mail == null) {
+        break;
+      } else {
+        const mailData = {
+          from: process.env.EMAIL_USER,  
+          to: mail.email,   
+          subject: 'Seat Availability',
+          text: 'A seat is available!',
+        };
+        transporter.sendMail(mailData, (err, info) => {
+          if(err)
+            console.log(err);
+          else 
+            console.log(info);
+       });
+      }
+      notification.deleteOne();
+      break;
+    }
+  }
 });
 
+// Create an new account and send user info to mongodb
 app.post("/submitUser", async (req, res) => {
   const { name, email, username, password } = req.body;
   const error = userSchema.validate(req.body).error;
@@ -222,36 +246,40 @@ app.post("/submitUser", async (req, res) => {
   res.redirect("/loggedIn");
 });
 
+// Logout
 app.get("/logout", (req, res) => {
   req.session.destroy();
   console.log("Logged out");
   res.redirect("/");
 });
 
+// Error page
 app.get("*", (req, res) => {
   res.status(404);
   const html = `<h1>404 - Oh no, something went wrong, that's tough!</h1>`;
   res.send(html);
 });
 
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
 
+// app.listen(port, () => {
+//   console.log(`Server is running on port ${port}`);
+// });
+
+// Post request for queueing for an email
 router.post('/email', (req,res) => {
   const {email} = req.body;
+  notification.insertOne({"email": email});
+  console.log(email);
   const mailData = {
     from: process.env.EMAIL_USER,  
     to: email,   
-    subject: 'Seat Available',
-    text: 'A seat is ready!',
+    subject: 'Seat Availability',
+    text: 'You are in Queue for a seat. You will get another email when the seat is available.',
   };
   transporter.sendMail(mailData, (err, info) => {
     if(err)
       console.log(err);
-    else
-      console.log(info);
  });
- res.redirect("/loggedIn");
+  res.redirect("/loggedIn");
 });
 module.exports = app;
