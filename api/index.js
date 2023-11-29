@@ -216,7 +216,7 @@ app.get("/loggedIn", async (req, res) => {
             console.log(info);
        });
       }
-      notification.deleteOne();
+      notification.deleteOne({});
       break;
     }
   }
